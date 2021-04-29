@@ -91,3 +91,38 @@ func TestQuery(t *testing.T) {
 		}
 	})
 }
+
+func TestTransfer(t *testing.T) {
+	stub := shimtest.NewMockStub("_car_", new(Chaincode))
+
+	// put a mock car into worldstate
+	myCar := Car{
+		Make:   "Toyota",
+		Model:  "Prius",
+		Colour: "blue",
+		Owner:  "Tomoko",
+	}
+	to := "Pritam"
+	carByte, _ := json.Marshal(myCar)
+	id := "car1"
+	// update worldstate require tx to be started and ended
+	stub.MockTransactionStart("_put_transfer")
+	stub.PutState(id, carByte)
+	stub.MockTransactionEnd("_put_transfer")
+
+	// mock transfer
+	result := stub.MockInvoke("tx1", [][]byte{[]byte("transfer"), []byte(id), []byte(to)})
+
+	if result.Status != shim.OK {
+		t.Errorf("failed to transfer car : %v", result.Message)
+	}
+
+	// check if owner is updated
+	carByte, _ = stub.GetState(id)
+	var gotCar Car
+	json.Unmarshal(carByte, &gotCar)
+
+	if gotCar.Owner != to {
+		t.Errorf("failed to update owner to %s", to)
+	}
+}

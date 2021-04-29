@@ -11,8 +11,9 @@ var (
 	// list of supported methods by invoke function
 	// mapping of function name with actual function
 	supportedMethods = map[string]func(stub shim.ChaincodeStubInterface, args []string) peer.Response{
-		"create": create,
-		"query":  query,
+		"create":   create,
+		"query":    query,
+		"transfer": transfer,
 	}
 )
 

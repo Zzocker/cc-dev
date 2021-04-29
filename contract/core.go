@@ -55,3 +55,23 @@ func query(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	}
 	return shim.Success(carByte)
 }
+
+func transfer(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	// args : carID , to
+	if len(args) != 2 {
+		return shim.Error(fmt.Sprintf("invalid number of argument, require 2 but got %d", len(args)))
+	}
+	carByte, err := stub.GetState(args[0])
+	if err != nil || len(carByte) == 0 {
+		return shim.Error("car not found")
+	}
+	var car Car
+	json.Unmarshal(carByte, &car)
+	car.Owner = args[1]
+	carByte, _ = json.Marshal(car)
+	err = stub.PutState(args[0], carByte)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(nil)
+}
