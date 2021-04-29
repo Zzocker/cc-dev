@@ -14,6 +14,7 @@ var (
 		"create":   create,
 		"query":    query,
 		"transfer": transfer,
+		"purge":    purge,
 	}
 )
 

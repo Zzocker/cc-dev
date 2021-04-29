@@ -75,3 +75,19 @@ func transfer(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	}
 	return shim.Success(nil)
 }
+
+func purge(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	// args : carID
+	if len(args) != 1 {
+		return shim.Error(fmt.Sprintf("invalid number of argument, require 1 but got %d", len(args)))
+	}
+	carByte, err := stub.GetState(args[0])
+	if err != nil || len(carByte) == 0 {
+		return shim.Error("car not found")
+	}
+	err = stub.DelState(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(nil)
+}

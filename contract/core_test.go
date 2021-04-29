@@ -126,3 +126,41 @@ func TestTransfer(t *testing.T) {
 		t.Errorf("failed to update owner to %s", to)
 	}
 }
+
+func TestPurge(t *testing.T) {
+	stub := shimtest.NewMockStub("_car_", new(Chaincode))
+
+	t.Run("not-found", func(t *testing.T) {
+		result := stub.MockInvoke("tx1", [][]byte{[]byte("purge"),[]byte("not_found")})
+		if result.Status != shim.ERROR {
+			t.Error("should not able to purge non-existing car")
+		}
+	})
+
+	t.Run("found", func(t *testing.T) {
+		// put mock data into worldstate
+		myCar := Car{
+			Make:   "Toyota",
+			Model:  "Prius",
+			Colour: "blue",
+			Owner:  "Tomoko",
+		}
+		carByte, _ := json.Marshal(myCar)
+		id := "car1"
+		// update worldstate require tx to be started and ended
+		stub.MockTransactionStart("__purge")
+		stub.PutState(id, carByte)
+		stub.MockTransactionEnd("__purge")
+
+		result := stub.MockInvoke("tx2", [][]byte{[]byte("purge"),[]byte(id)})
+		if result.Status != shim.OK {
+			t.Errorf("failed to purge mocked car : %s", result.Message)
+		}
+
+		// check if purged car exists or not in worldstate
+		carByte, _ = stub.GetState(id)
+		if len(carByte) != 0 {
+			t.Error("mocked car should have been deleted")
+		}
+	})
+}
