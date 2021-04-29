@@ -43,3 +43,15 @@ func create(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	}
 	return shim.Success([]byte(id))
 }
+
+func query(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	// 0th index is carID
+	if len(args) != 1 {
+		return shim.Error(fmt.Sprintf("invalid number of argument, require 1 but got %d", len(args)))
+	}
+	carByte, err := stub.GetState(args[0])
+	if err != nil || len(carByte) == 0 {
+		return shim.Error(fmt.Sprintf("car with id = %s , not found", args[0]))
+	}
+	return shim.Success(carByte)
+}

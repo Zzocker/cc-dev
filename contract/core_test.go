@@ -51,3 +51,43 @@ func TestCreate(t *testing.T) {
 		t.Errorf("wanted : %+v , but got : %+v", myCar, wantCar)
 	}
 }
+
+func TestQuery(t *testing.T) {
+	stub := shimtest.NewMockStub("_car_", new(Chaincode))
+
+	t.Run("found", func(t *testing.T) {
+		// put mock data into worldstate
+		myCar := Car{
+			Make:   "Toyota",
+			Model:  "Prius",
+			Colour: "blue",
+			Owner:  "Tomoko",
+		}
+		carByte, _ := json.Marshal(myCar)
+		id := "car1"
+		// update worldstate require tx to be started and ended
+		stub.MockTransactionStart("__query")
+		stub.PutState("car1", carByte)
+		stub.MockTransactionEnd("__query")
+		//
+		gotCarByte, err := stub.GetState(id)
+		if err != nil || len(gotCarByte) == 0 {
+			t.Errorf("query should return car with id = %s , but got empty data", id)
+		}
+		var gotCar Car
+		err = json.Unmarshal(gotCarByte, &gotCar)
+		if err != nil {
+			t.Error("car data formate miss-match")
+		}
+		if !reflect.DeepEqual(myCar, gotCar) {
+			t.Errorf("wantted : %+v, but got : %+v", myCar, gotCar)
+		}
+	})
+
+	t.Run("not-found", func(t *testing.T) {
+		result := stub.MockInvoke("__query__", [][]byte{[]byte("not_found")})
+		if result.Status != shim.ERROR {
+			t.Errorf("should return not found error , but got otherwise %s", string(result.Payload))
+		}
+	})
+}
