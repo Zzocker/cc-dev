@@ -1,6 +1,9 @@
 package contract
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/peer"
 )
@@ -24,5 +27,19 @@ type Car struct {
 }
 
 func create(stub shim.ChaincodeStubInterface, args []string) peer.Response {
-	return shim.Success(nil)
+	if len(args) != 1 {
+		return shim.Error(fmt.Sprintf("invalid number of argument, require 1 but got %d", len(args)))
+	}
+	// args[0] -- marshaled json of car
+	var car Car
+	err := json.Unmarshal([]byte(args[0]), &car)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("invalid json object : %s", err.Error()))
+	}
+	id := stub.GetTxID()
+	err = stub.PutState(id, []byte(args[0]))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success([]byte(id))
 }
