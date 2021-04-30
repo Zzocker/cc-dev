@@ -37,7 +37,13 @@ func create(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 		return shim.Error(fmt.Sprintf("invalid json object : %s", err.Error()))
 	}
 	id := stub.GetTxID()
-	err = stub.PutState(id, []byte(args[0]))
+	ownerID, err := getOwnerID(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	car.Owner = *ownerID
+	carByte, _ := json.Marshal(car)
+	err = stub.PutState(id, carByte)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -67,6 +73,13 @@ func transfer(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	}
 	var car Car
 	json.Unmarshal(carByte, &car)
+	ownerID, err := getOwnerID(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if car.Owner != *ownerID {
+		return shim.Error("only owner of the car transfer to other owner")
+	}
 	car.Owner = args[1]
 	carByte, _ = json.Marshal(car)
 	err = stub.PutState(args[0], carByte)
@@ -84,6 +97,15 @@ func purge(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	carByte, err := stub.GetState(args[0])
 	if err != nil || len(carByte) == 0 {
 		return shim.Error("car not found")
+	}
+	var car Car
+	json.Unmarshal(carByte, &car)
+	ownerID, err := getOwnerID(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if car.Owner != *ownerID {
+		return shim.Error("only owner of the car can purge")
 	}
 	err = stub.DelState(args[0])
 	if err != nil {

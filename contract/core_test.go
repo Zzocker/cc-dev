@@ -2,6 +2,7 @@ package contract
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -17,10 +18,13 @@ func TestCreate(t *testing.T) {
 		Make:   "Toyota",
 		Model:  "Prius",
 		Colour: "blue",
-		Owner:  "Tomoko",
 	}
+	owner := fmt.Sprintf("%s_%s", testMSPID, user1.name)
+
 	carByte, _ := json.Marshal(myCar)
 
+	// set creator
+	setCreator(stub, user1.certPem)
 	// make mock invoke with function "create"
 	// input : <Tx ID > , [][]byte{} - array of argument with 0th index as method name
 	txId := "tx1"
@@ -40,15 +44,16 @@ func TestCreate(t *testing.T) {
 		t.Error("car is not created")
 	}
 
-	var wantCar Car
-	err = json.Unmarshal(carByte, &wantCar)
+	myCar.Owner = owner
+	var gotCar Car
+	err = json.Unmarshal(carByte, &gotCar)
 	if err != nil {
 		t.Errorf("data formate miss-match %s", err.Error())
 	}
 
 	// check if input car and car from worldstate are same
-	if !reflect.DeepEqual(myCar, wantCar) {
-		t.Errorf("wanted : %+v , but got : %+v", myCar, wantCar)
+	if !reflect.DeepEqual(myCar, gotCar) {
+		t.Errorf("wanted : %+v , but got : %+v", myCar, gotCar)
 	}
 }
 
@@ -100,7 +105,7 @@ func TestTransfer(t *testing.T) {
 		Make:   "Toyota",
 		Model:  "Prius",
 		Colour: "blue",
-		Owner:  "Tomoko",
+		Owner:  fmt.Sprintf("%s_%s", testMSPID, user1.name),
 	}
 	to := "Pritam"
 	carByte, _ := json.Marshal(myCar)
@@ -109,6 +114,9 @@ func TestTransfer(t *testing.T) {
 	stub.MockTransactionStart("_put_transfer")
 	stub.PutState(id, carByte)
 	stub.MockTransactionEnd("_put_transfer")
+
+	// set creator
+	setCreator(stub,user1.certPem)
 
 	// mock transfer
 	result := stub.MockInvoke("tx1", [][]byte{[]byte("transfer"), []byte(id), []byte(to)})
@@ -131,7 +139,7 @@ func TestPurge(t *testing.T) {
 	stub := shimtest.NewMockStub("_car_", new(Chaincode))
 
 	t.Run("not-found", func(t *testing.T) {
-		result := stub.MockInvoke("tx1", [][]byte{[]byte("purge"),[]byte("not_found")})
+		result := stub.MockInvoke("tx1", [][]byte{[]byte("purge"), []byte("not_found")})
 		if result.Status != shim.ERROR {
 			t.Error("should not able to purge non-existing car")
 		}
@@ -143,7 +151,7 @@ func TestPurge(t *testing.T) {
 			Make:   "Toyota",
 			Model:  "Prius",
 			Colour: "blue",
-			Owner:  "Tomoko",
+			Owner: fmt.Sprintf("%s_%s", testMSPID, user1.name),
 		}
 		carByte, _ := json.Marshal(myCar)
 		id := "car1"
@@ -152,7 +160,9 @@ func TestPurge(t *testing.T) {
 		stub.PutState(id, carByte)
 		stub.MockTransactionEnd("__purge")
 
-		result := stub.MockInvoke("tx2", [][]byte{[]byte("purge"),[]byte(id)})
+		// set creator
+		setCreator(stub,user1.certPem)
+		result := stub.MockInvoke("tx2", [][]byte{[]byte("purge"), []byte(id)})
 		if result.Status != shim.OK {
 			t.Errorf("failed to purge mocked car : %s", result.Message)
 		}
